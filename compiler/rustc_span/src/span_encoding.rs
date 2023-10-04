@@ -108,6 +108,8 @@ pub const DUMMY_SP: Span =
 
 /// Dummy span, both position and length are zero, syntax context is zero as well.
 
+/// Dummy span, both position and length are zero, syntax context is zero as well.
+
 impl Span {
     #[inline]
     pub fn new(
@@ -233,7 +235,6 @@ impl Span {
         }
     }
 }
-
 /*
 impl SpanChain {
     #[inline]
@@ -338,6 +339,7 @@ pub struct SpanChainInterner {
     spans_chain: FxIndexSet<Vec<Span>>,
 }
 */
+
 
 impl SpanInterner {
     fn intern(&mut self, span_data: &SpanData) -> u32 {

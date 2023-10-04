@@ -53,7 +53,7 @@ pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
 pub mod edit_distance;
 mod span_encoding;
-pub use span_encoding::{Span, DUMMY_SP};
+pub use span_encoding::{Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
 
 pub mod symbol;
 pub use symbol::{sym, Symbol};
@@ -514,6 +514,7 @@ impl SpanData {
     // pub fn with_ctxt_chain(&self, ctxt: SyntaxContext) -> SpanChain {
     //     SpanChain::new1(self.lo, self.hi, ctxt, self.parent)
     // }
+
     #[inline]
     pub fn with_parent(&self, parent: Option<LocalDefId>) -> Span {
         Span::new(self.lo, self.hi, self.ctxt, parent)
@@ -2242,7 +2243,6 @@ impl Ord for SpanChain {
         Ord::cmp(&self.data(), &rhs.data())
     }
 }
-
 impl SpanChain {
     #[inline]
     pub fn lo(self) -> BytePos {
