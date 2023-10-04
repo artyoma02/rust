@@ -94,8 +94,15 @@ const CTXT_INTERNED_MARKER: u16 = 0b1111_1111_1111_1111;
 /// The dummy span has zero position, length, and context, and no parent.
 pub const DUMMY_SP: Span =
     Span { lo_or_index: 0, len_with_tag_or_marker: 0, ctxt_or_parent_or_marker: 0 };
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+#[rustc_pass_by_value]
+pub struct SpanChain(Span); 
 
-impl Span {
+/// Dummy span, both position and length are zero, syntax context is zero as well.
+
+pub const DUMMY_SP_CH: SpanChain = SpanChain { base_or_index: 0, len_or_tag: 0, ctxt_or_tag: 0 };
+
+'impl Span {
     #[inline]
     pub fn new(
         mut lo: BytePos,
@@ -237,10 +244,108 @@ impl Span {
         }
     }
 }
+/*
+impl SpanChain {
+    #[inline]
+    pub fn new(spans: Vec<Span>) -> Self {
+        if spans.len() == 1 {
+            let (base, len, ctxt) = (
+                spans[0].lo_or_index,
+                spans[0].len_with_tag_or_marker,
+                spans[0].ctxt_or_parent_or_marker,
+            );
+            return SpanChain { base_or_index: base, len_or_tag: len, ctxt_or_tag: ctxt };
+        } else {
+            let index =
+                with_span_chain_interner(|span_chain_interner| span_chain_interner.intern(spans));
+            return SpanChain {
+                base_or_index: index,
+                len_or_tag: MAX_LEN as u16,
+                ctxt_or_tag: CTXT_TAG as u16,
+            };
+        }
+    }
+
+    #[inline]
+    pub fn new1(
+        mut lo: BytePos,
+        mut hi: BytePos,
+        ctxt: SyntaxContext,
+        parent: Option<LocalDefId>,
+    ) -> Self {
+        let tmp = Span::new(lo, hi, ctxt, parent);
+        SpanChain::new(vec![tmp])
+    }
+
+    #[inline]
+    pub fn data(self) -> SpanData {
+        let data = self.data_untracked();
+        if let Some(parent) = data.parent {
+            (*SPAN_TRACK)(parent);
+        }
+        data
+    }
+
+    #[inline]
+    pub fn data_untracked(self) -> SpanData {
+        if self.len_or_tag != MAX_LEN as u16 {
+            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
+            let tmp =
+                Span { base_or_index: base, len_or_tag: len, ctxt_or_tag: ctx.as_u32() as u16 };
+            tmp.data_untracked()
+        } else {
+            let index = self.base_or_index;
+            let tmp = with_span_chain_interner(|chain_interner| {
+                chain_interner.spans_chain[index as usize]
+            });
+            tmp[0].data_untracked()
+        }
+    }
+
+    #[inline]
+    pub fn ctxt(self) -> SyntaxContext {
+        if self.len_or_tag != MAX_LEN as u16 {
+            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
+            let tmp =
+                Span { base_or_index: base, len_or_tag: len, ctxt_or_tag: ctx.as_u32() as u16 };
+            tmp.ctxt()
+        } else {
+            let index = self.base_or_index;
+            let tmp = with_span_chain_interner(|chain_interner| {
+                chain_interner.spans_chain[index as usize]
+            });
+            tmp[0].ctxt()
+        }
+    }
+
+    #[inline]
+    pub fn to_span(self) -> Span {
+        if self.len_or_tag != MAX_LEN as u16 {
+            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
+            Span {
+                lo_or_index: base,
+                len_with_tag_or_marker: len,
+                ctxt_or_parent_or_marker: ctx.as_u32() as u16,
+            }
+        } else {
+            let index = self.base_or_index;
+            let tmp = with_span_chain_interner(|chain_interner| {
+                chain_interner.spans_chain[index as usize]
+            });
+            tmp[0]
+        }
+    }
+}
+*/
 
 #[derive(Default)]
 pub struct SpanInterner {
     spans: FxIndexSet<SpanData>,
+}
+
+#[derive(Default)]
+pub struct SpanChainInterner {
+    spans_chain: FxIndexSet<Vec<Span>>,
 }
 
 impl SpanInterner {
@@ -250,8 +355,22 @@ impl SpanInterner {
     }
 }
 
+impl SpanChainInterner {
+    fn intern(&mut self, span_chain_data: Vec<Span>) -> u32 {
+        let (index, _) = self.spans_chain.insert_full(span_chain_data);
+        index as u32
+    }
+}
+
 // If an interner exists, return it. Otherwise, prepare a fresh one.
 #[inline]
 fn with_span_interner<T, F: FnOnce(&mut SpanInterner) -> T>(f: F) -> T {
     crate::with_session_globals(|session_globals| f(&mut session_globals.span_interner.lock()))
+}
+
+#[inline]
+fn with_span_chain_interner<T, F: FnOnce(&mut SpanChainInterner) -> T>(f: F) -> T {
+    crate::with_session_globals(|session_globals| {
+        f(&mut session_globals.span_chain_interner.lock())
+    })
 }

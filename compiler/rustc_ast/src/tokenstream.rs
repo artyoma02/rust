@@ -22,7 +22,7 @@ use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
 use rustc_data_structures::sync::{self, Lrc};
 use rustc_macros::HashStable_Generic;
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
-use rustc_span::{sym, Span, Symbol, DUMMY_SP};
+use rustc_span::{sym, Span, SpanChain, Symbol, DUMMY_SP, DUMMY_SP_CH};
 use smallvec::{smallvec, SmallVec};
 
 use std::borrow::Cow;
@@ -95,7 +95,7 @@ impl TokenTree {
     }
 
     /// Create a `TokenTree::Token` with joint spacing.
-    pub fn token_joint(kind: TokenKind, span: Span) -> TokenTree {
+    pub fn token_joint(kind: TokenKind, span_: Span) -> TokenTree {
         TokenTree::Token(Token::new(kind, span), Spacing::Joint)
     }
 
