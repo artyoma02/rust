@@ -13,7 +13,7 @@ use rustc_macros::HashStable_Generic;
 use rustc_span::symbol::{kw, sym};
 #[allow(hidden_glob_reexports)]
 use rustc_span::symbol::{Ident, Symbol};
-use rustc_span::{self, edition::Edition, Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
+use rustc_span::{self, edition::Edition, Span, DUMMY_SP};
 use std::borrow::Cow;
 use std::fmt;
 
@@ -183,7 +183,7 @@ impl LitKind {
     }
 }
 
-pub fn ident_can_begin_expr(name: Symbol, span: SpanChain, is_raw: bool) -> bool {
+pub fn ident_can_begin_expr(name: Symbol, span: Span, is_raw: bool) -> bool {
     let ident_token = Token::new(Ident(name, is_raw), span);
 
     !ident_token.is_reserved_ident()
@@ -213,7 +213,7 @@ pub fn ident_can_begin_expr(name: Symbol, span: SpanChain, is_raw: bool) -> bool
         .contains(&name)
 }
 
-fn ident_can_begin_type(name: Symbol, span: SpanChain, is_raw: bool) -> bool {
+fn ident_can_begin_type(name: Symbol, span: Span, is_raw: bool) -> bool {
     let ident_token = Token::new(Ident(name, is_raw), span);
 
     !ident_token.is_reserved_ident()
@@ -340,7 +340,7 @@ impl Clone for TokenKind {
 #[derive(Clone, PartialEq, Encodable, Decodable, Debug, HashStable_Generic)]
 pub struct Token {
     pub kind: TokenKind,
-    span: SpanChain,
+    span: Span,
 }
 
 impl TokenKind {
@@ -398,7 +398,7 @@ impl TokenKind {
 }
 
 impl Token {
-    pub fn new(kind: TokenKind, span: SpanChain) -> Self {
+    pub fn new(kind: TokenKind, span: Span) -> Self {
         Token { kind, span }
     }
 
@@ -406,8 +406,8 @@ impl Token {
         self.span.to_span()
     }
 
-    pub fn set_span(self, span: SpanChain) -> Self {
-        Token::new(self.kind, SpanChain::new(vec![span]))
+    pub fn set_span(self, span: Span) -> Self {
+        Token::new(self.kind, Span::new(vec![span]))
     }
 
     /// Some token that will be thrown away later.
@@ -426,7 +426,7 @@ impl Token {
     /// for which spans affect name resolution and edition checks.
     /// Note that keywords are also identifiers, so they should use this
     /// if they keep spans or perform edition checks.
-    pub fn uninterpolated_span(&self) -> SpanChain {
+    pub fn uninterpolated_span(&self) -> Span {
         match &self.kind {
             Interpolated(nt) => nt.span(),
             _ => self.span,
@@ -934,7 +934,7 @@ impl fmt::Display for NonterminalKind {
 }
 
 impl Nonterminal {
-    pub fn span(&self) -> SpanChain {
+    pub fn span(&self) -> Span {
         match self {
             NtItem(item) => item.span,
             NtBlock(block) => block.span,

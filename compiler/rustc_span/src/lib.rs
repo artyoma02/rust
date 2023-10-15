@@ -52,7 +52,7 @@ pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
 pub mod edit_distance;
 mod span_encoding;
-pub use span_encoding::{Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
+pub use span_encoding::{Span, DUMMY_SP};
 
 pub mod symbol;
 pub use symbol::{sym, Symbol};
@@ -88,7 +88,7 @@ mod tests;
 pub struct SessionGlobals {
     symbol_interner: symbol::Interner,
     span_interner: Lock<span_encoding::SpanInterner>,
-    span_chain_interner: Lock<span_encoding::SpanChainInterner>,
+    //span_chain_interner: Lock<span_encoding::SpanChainInterner>,
     hygiene_data: Lock<hygiene::HygieneData>,
 
     /// A reference to the source map in the `Session`. It's an `Option`
@@ -106,7 +106,7 @@ impl SessionGlobals {
         SessionGlobals {
             symbol_interner: symbol::Interner::fresh(),
             span_interner: Lock::new(span_encoding::SpanInterner::default()),
-            span_chain_interner: Lock::new(span_encoding::SpanChainInterner::default()),
+            //span_chain_interner: Lock::new(span_encoding::SpanChainInterner::default()),
             hygiene_data: Lock::new(hygiene::HygieneData::new(edition)),
             source_map: Lock::new(None),
         }

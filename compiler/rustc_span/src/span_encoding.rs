@@ -94,15 +94,10 @@ const CTXT_INTERNED_MARKER: u16 = 0b1111_1111_1111_1111;
 /// The dummy span has zero position, length, and context, and no parent.
 pub const DUMMY_SP: Span =
     Span { lo_or_index: 0, len_with_tag_or_marker: 0, ctxt_or_parent_or_marker: 0 };
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-#[rustc_pass_by_value]
-pub struct SpanChain(Span); 
 
 /// Dummy span, both position and length are zero, syntax context is zero as well.
 
-pub const DUMMY_SP_CH: SpanChain = SpanChain { base_or_index: 0, len_or_tag: 0, ctxt_or_tag: 0 };
-
-'impl Span {
+impl Span {
     #[inline]
     pub fn new(
         mut lo: BytePos,
@@ -342,11 +337,12 @@ impl SpanChain {
 pub struct SpanInterner {
     spans: FxIndexSet<SpanData>,
 }
-
+/*
 #[derive(Default)]
 pub struct SpanChainInterner {
     spans_chain: FxIndexSet<Vec<Span>>,
 }
+*/
 
 impl SpanInterner {
     fn intern(&mut self, span_data: &SpanData) -> u32 {
@@ -355,12 +351,14 @@ impl SpanInterner {
     }
 }
 
+/*
 impl SpanChainInterner {
     fn intern(&mut self, span_chain_data: Vec<Span>) -> u32 {
         let (index, _) = self.spans_chain.insert_full(span_chain_data);
         index as u32
     }
 }
+*/
 
 // If an interner exists, return it. Otherwise, prepare a fresh one.
 #[inline]
@@ -368,9 +366,11 @@ fn with_span_interner<T, F: FnOnce(&mut SpanInterner) -> T>(f: F) -> T {
     crate::with_session_globals(|session_globals| f(&mut session_globals.span_interner.lock()))
 }
 
+/*
 #[inline]
 fn with_span_chain_interner<T, F: FnOnce(&mut SpanChainInterner) -> T>(f: F) -> T {
     crate::with_session_globals(|session_globals| {
         f(&mut session_globals.span_chain_interner.lock())
     })
 }
+*/
