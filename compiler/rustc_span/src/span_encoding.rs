@@ -90,6 +90,7 @@ pub struct Span {
 /// The dummy span has zero position, length, and context, and no parent.
 pub const DUMMY_SP: Span =
     Span { lo_or_index: 0, len_with_tag_or_marker: 0, ctxt_or_parent_or_marker: 0 };
+<<<<<<< HEAD
 // #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 // #[rustc_pass_by_value]
 // pub struct SpanChain {
@@ -110,6 +111,11 @@ pub const DUMMY_SP: Span =
 
 /// Dummy span, both position and length are zero, syntax context is zero as well.
 
+=======
+
+/// Dummy span, both position and length are zero, syntax context is zero as well.
+
+>>>>>>> 218b760d0d8 (Update changes)
 impl Span {
     #[inline]
     pub fn new(
@@ -339,7 +345,10 @@ pub struct SpanChainInterner {
     spans_chain: FxIndexSet<Vec<Span>>,
 }
 */
+<<<<<<< HEAD
 
+=======
+>>>>>>> 218b760d0d8 (Update changes)
 
 impl SpanInterner {
     fn intern(&mut self, span_data: &SpanData) -> u32 {
