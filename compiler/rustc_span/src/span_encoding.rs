@@ -344,7 +344,6 @@ impl SpanChain {
 }
 */
 
-
 #[derive(Default)]
 pub struct SpanInterner {
     spans: FxIndexSet<SpanData>,

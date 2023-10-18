@@ -485,42 +485,42 @@ impl SpanData {
     pub fn span(&self) -> Span {
         Span::new(self.lo, self.hi, self.ctxt, self.parent)
     }
-    #[inline]
-    pub fn span_chain(&self) -> SpanChain {
-        SpanChain::new1(self.lo, self.hi, self.ctxt, self.parent)
-    }
+    // #[inline]
+    // pub fn span_chain(&self) -> SpanChain {
+    //     SpanChain::new1(self.lo, self.hi, self.ctxt, self.parent)
+    // }
     #[inline]
     pub fn with_lo(&self, lo: BytePos) -> Span {
         Span::new(lo, self.hi, self.ctxt, self.parent)
     }
-    #[inline]
-    pub fn with_lo_chain(&self, lo: BytePos) -> SpanChain {
-        SpanChain::new1(lo, self.hi, self.ctxt, self.parent)
-    }
-    #[inline]
+    // #[inline]
+    // pub fn with_lo_chain(&self, lo: BytePos) -> SpanChain {
+    //     SpanChain::new1(lo, self.hi, self.ctxt, self.parent)
+    // }
+    // #[inline]
     pub fn with_hi(&self, hi: BytePos) -> Span {
         Span::new(self.lo, hi, self.ctxt, self.parent)
     }
-    #[inline]
-    pub fn with_hi_chain(&self, hi: BytePos) -> SpanChain {
-        SpanChain::new1(self.lo, hi, self.ctxt, self.parent)
-    }
+    // #[inline]
+    // pub fn with_hi_chain(&self, hi: BytePos) -> SpanChain {
+    //     SpanChain::new1(self.lo, hi, self.ctxt, self.parent)
+    // }
     #[inline]
     pub fn with_ctxt(&self, ctxt: SyntaxContext) -> Span {
         Span::new(self.lo, self.hi, ctxt, self.parent)
     }
-    #[inline]
-    pub fn with_ctxt_chain(&self, ctxt: SyntaxContext) -> SpanChain {
-        SpanChain::new1(self.lo, self.hi, ctxt, self.parent)
-    }
+    // #[inline]
+    // pub fn with_ctxt_chain(&self, ctxt: SyntaxContext) -> SpanChain {
+    //     SpanChain::new1(self.lo, self.hi, ctxt, self.parent)
+    // }
     #[inline]
     pub fn with_parent(&self, parent: Option<LocalDefId>) -> Span {
         Span::new(self.lo, self.hi, self.ctxt, parent)
     }
-    #[inline]
-    pub fn with_parent_chain(&self, parent: Option<LocalDefId>) -> SpanChain {
-        SpanChain::new1(self.lo, self.hi, self.ctxt, parent)
-    }
+    // #[inline]
+    // pub fn with_parent_chain(&self, parent: Option<LocalDefId>) -> SpanChain {
+    //     SpanChain::new1(self.lo, self.hi, self.ctxt, parent)
+    // }
     /// Returns `true` if this is a dummy span with any hygienic context.
     #[inline]
     pub fn is_dummy(self) -> bool {
