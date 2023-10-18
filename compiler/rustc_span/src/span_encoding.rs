@@ -2,7 +2,7 @@
 // One format is used for keeping span data inline,
 // another contains index into an out-of-line span interner.
 // The encoding format for inline spans were obtained by optimizing over crates in rustc/libstd.
-// See  
+// See
 
 use crate::def_id::{DefIndex, LocalDefId};
 use crate::hygiene::SyntaxContext;
@@ -102,7 +102,6 @@ pub const DUMMY_SP: Span =
 
 // pub const DUMMY_SP_CH: SpanChain = SpanChain {base_or_index: 0, len_or_tag: 0, ctxt_or_tag: 0};
 
-
 /// Dummy span, both position and length are zero, syntax context is zero as well.
 
 // pub const DUMMY_SP_CH: SpanChain = SpanChain {base_or_index: 0, len_or_tag: 0, ctxt_or_tag: 0};
@@ -146,7 +145,8 @@ impl Span {
                     len_with_tag_or_marker: len as u16,
                     ctxt_or_parent_or_marker: ctxt2 as u16,
                 };
-            } else if ctxt2 == SyntaxContext::root().as_u32()
+            }
+            if ctxt2 == SyntaxContext::root().as_u32()
                 && let Some(parent) = parent
                 && let parent2 = parent.local_def_index.as_u32()
                 && parent2 <= MAX_CTXT
@@ -328,7 +328,6 @@ impl SpanChain {
 }
 */
 
-
 #[derive(Default)]
 pub struct SpanInterner {
     spans: FxIndexSet<SpanData>,
@@ -339,7 +338,6 @@ pub struct SpanChainInterner {
     spans_chain: FxIndexSet<Vec<Span>>,
 }
 */
-
 
 impl SpanInterner {
     fn intern(&mut self, span_data: &SpanData) -> u32 {
