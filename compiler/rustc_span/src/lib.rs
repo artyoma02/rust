@@ -53,7 +53,7 @@ pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
 pub mod edit_distance;
 mod span_encoding;
-pub use span_encoding::{Span, DUMMY_SP};
+pub use span_encoding::{Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
 
 pub mod symbol;
 pub use symbol::{sym, Symbol};
@@ -2782,7 +2782,4 @@ impl fmt::Debug for SpanChain {
         }
     }
 }
-<<<<<<< HEAD
 */
-=======
->>>>>>> 58449cf4670 (Work at progress #2)
