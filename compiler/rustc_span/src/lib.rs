@@ -53,7 +53,7 @@ pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
 pub mod edit_distance;
 mod span_encoding;
-pub use span_encoding::{Span, DUMMY_SP};
+pub use span_encoding::{Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
 
 pub mod symbol;
 pub use symbol::{sym, Symbol};
@@ -491,6 +491,10 @@ impl SpanData {
     // }
 
     #[inline]
+    pub fn span_chain(&self) -> SpanChain {
+        SpanChain::new1(self.lo, self.hi, self.ctxt, self.parent)
+    }
+    #[inline]
     pub fn with_lo(&self, lo: BytePos) -> Span {
         Span::new(lo, self.hi, self.ctxt, self.parent)
     }
@@ -507,6 +511,10 @@ impl SpanData {
     //     SpanChain::new1(self.lo, hi, self.ctxt, self.parent)
     // }
     #[inline]
+    pub fn with_hi_chain(&self, hi: BytePos) -> SpanChain {
+        SpanChain::new1(self.lo, hi, self.ctxt, self.parent)
+    }
+    #[inline]
     pub fn with_ctxt(&self, ctxt: SyntaxContext) -> Span {
         Span::new(self.lo, self.hi, ctxt, self.parent)
     }
@@ -515,6 +523,10 @@ impl SpanData {
     //     SpanChain::new1(self.lo, self.hi, ctxt, self.parent)
     // }
 
+    #[inline]
+    pub fn with_ctxt_chain(&self, ctxt: SyntaxContext) -> SpanChain {
+        SpanChain::new1(self.lo, self.hi, ctxt, self.parent)
+    }
     #[inline]
     pub fn with_parent(&self, parent: Option<LocalDefId>) -> Span {
         Span::new(self.lo, self.hi, self.ctxt, parent)
