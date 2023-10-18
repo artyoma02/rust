@@ -734,7 +734,7 @@ impl DelimSpan {
     }
 
     pub fn dummy() -> Self {
-        Self::from_single(DUMMY_SP)
+        Self::from_single(DUMMY_SP_CH)
     }
 
     pub fn entire(self) -> SpanChain {
