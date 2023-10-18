@@ -2782,4 +2782,7 @@ impl fmt::Debug for SpanChain {
         }
     }
 }
+<<<<<<< HEAD
 */
+=======
+>>>>>>> 58449cf4670 (Work at progress #2)
