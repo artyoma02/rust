@@ -25,6 +25,7 @@
 #![feature(round_char_boundary)]
 #![deny(rustc::untranslatable_diagnostic)]
 #![deny(rustc::diagnostic_outside_of_impl)]
+#![cfg_attr(not(bootstrap), allow(internal_features))]
 
 #[macro_use]
 extern crate rustc_macros;
@@ -52,7 +53,7 @@ pub mod def_id;
 use def_id::{CrateNum, DefId, DefPathHash, LocalDefId, LOCAL_CRATE};
 pub mod edit_distance;
 mod span_encoding;
-pub use span_encoding::{Span, DUMMY_SP};
+pub use span_encoding::{Span, SpanChain, DUMMY_SP, DUMMY_SP_CH};
 
 pub mod symbol;
 pub use symbol::{sym, Symbol};
@@ -2224,7 +2225,7 @@ impl ErrorGuaranteed {
         ErrorGuaranteed(())
     }
 }
-
+/*
 #[cfg(not(parallel_compiler))]
 impl !Send for SpanChain {}
 #[cfg(not(parallel_compiler))]
@@ -2240,7 +2241,7 @@ impl Ord for SpanChain {
         Ord::cmp(&self.data(), &rhs.data())
     }
 }
-/*
+
 impl SpanChain {
     #[inline]
     pub fn lo(self) -> BytePos {
@@ -2769,4 +2770,7 @@ impl fmt::Debug for SpanChain {
         }
     }
 }
+<<<<<<< HEAD
 */
+=======
+>>>>>>> 58449cf4670 (Work at progress #2)
