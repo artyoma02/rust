@@ -79,17 +79,6 @@ pub struct Span {
     ctxt_or_tag: u16,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Hash)]
-#[rustc_pass_by_value]
-pub struct SpanChain {
-    base_or_index: u32,
-    len_or_tag: u16,
-    ctxt_or_tag: u16,
-}
-
-/// The dummy span has zero position, length, and context, and no parent.
-pub const DUMMY_SP: Span =
-    Span { lo_or_index: 0, len_with_tag_or_marker: 0, ctxt_or_parent_or_marker: 0 };
 // #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 // #[rustc_pass_by_value]
 // pub struct SpanChain {
@@ -97,6 +86,11 @@ pub const DUMMY_SP: Span =
 //     len_or_tag: u16,
 //     ctxt_or_tag: u16,
 // }
+
+/// The dummy span has zero position, length, and context, and no parent.
+pub const DUMMY_SP: Span =
+    Span { lo_or_index: 0, len_with_tag_or_marker: 0, ctxt_or_parent_or_marker: 0 };
+
 
 /// Dummy span, both position and length are zero, syntax context is zero as well.
 
@@ -229,93 +223,6 @@ impl Span {
     }
 }
 
-impl SpanChain {
-    #[inline]
-    pub fn new(spans: Vec<Span> ) -> Self {
-            if spans.len() == 1 {
-                let (base, len, ctxt) = (spans[0].base_or_index, 
-                                        spans[0].len_or_tag, 
-                                        spans[0].ctxt_or_tag
-                                        );
-                return SpanChain {
-                    base_or_index: base,
-                    len_or_tag: len,
-                    ctxt_or_tag: ctxt,
-                };
-            } else {
-                let index =
-                    with_span_chain_interner(|span_chain_interner| span_chain_interner
-                                            .intern(spans));
-                return SpanChain {
-                    base_or_index: index,
-                    len_or_tag: MAX_LEN as u16,
-                    ctxt_or_tag: CTXT_TAG as u16,
-                };
-            }
-    }
-
-    #[inline]
-    pub fn new1(
-        mut lo: BytePos,
-        mut hi: BytePos,
-        ctxt: SyntaxContext,
-        parent: Option<LocalDefId>,
-    ) -> Self {
-        let tmp = Span::new(lo, hi, ctxt, parent);
-        SpanChain::new(vec![tmp])
-    }
-
-    #[inline]
-    pub fn data(self) -> SpanData {
-        let data = self.data_untracked();
-        if let Some(parent) = data.parent {
-            (*SPAN_TRACK)(parent);
-        }
-        data
-    }
-
-    #[inline]
-    pub fn data_untracked(self) -> SpanData {
-        if self.len_or_tag != MAX_LEN as u16 {
-            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
-            let tmp = Span {base_or_index: base, len_or_tag: len, ctxt_or_tag: ctx.as_u32() as u16};
-            tmp.data_untracked()
-        } else {
-            let index = self.base_or_index;
-            let tmp = with_span_chain_interner(|chain_interner| chain_interner.spans_chain[index as usize]);
-            tmp[0].data_untracked()
-        }
-    }
-
-    /// This function is used as a fast path when decoding the full `SpanData` is not necessary.
-    /// It's a cut-down version of `data_untracked`.
-    #[cfg_attr(not(test), rustc_diagnostic_item = "SpanCtxt")]
-    #[inline]
-    pub fn ctxt(self) -> SyntaxContext {
-        if self.len_or_tag != MAX_LEN as u16 {
-            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
-            let tmp = Span{base_or_index: base, len_or_tag: len, ctxt_or_tag: ctx.as_u32() as u16};
-            tmp.ctxt()
-        } else {
-            let index = self.base_or_index;
-            let tmp = with_span_chain_interner(|chain_interner| chain_interner.spans_chain[index as usize]);
-            tmp[0].ctxt()
-        }
-    }
-
-    #[inline]
-    pub fn to_span(self) -> Span {
-        if self.len_or_tag != MAX_LEN as u16 {
-            let (base, len, ctx) = (self.base_or_index, self.len_or_tag, self.ctxt());
-            Span{base_or_index: base, len_or_tag: len, ctxt_or_tag: ctx.as_u32() as u16}
-        } else {
-            let index = self.base_or_index;
-            let tmp = with_span_chain_interner(|chain_interner| chain_interner.spans_chain[index as usize]);
-            tmp[0]
-        }
-    }
-
-}
 /*
 impl SpanChain {
     #[inline]
@@ -421,11 +328,6 @@ pub struct SpanChainInterner {
 }
 */
 
-
-#[derive(Default)]
-pub struct SpanChainInterner {
-    spans_chain: FxIndexSet<Vec<Span>>,
-}
 
 impl SpanInterner {
     fn intern(&mut self, span_data: &SpanData) -> u32 {
