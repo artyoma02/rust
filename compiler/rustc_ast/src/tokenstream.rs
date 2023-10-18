@@ -74,7 +74,7 @@ impl TokenTree {
     }
 
     /// Retrieves the `TokenTree`'s span.
-    pub fn span(&self) -> Span {
+    pub fn span(&self) -> SpanChain {
         match self {
             TokenTree::Token(token, _) => token.span,
             TokenTree::Delimited(sp, ..) => sp.entire(),
@@ -82,7 +82,7 @@ impl TokenTree {
     }
 
     /// Modify the `TokenTree`'s span in-place.
-    pub fn set_span(&mut self, span: Span) {
+    pub fn set_span(&mut self, span: SpanChain) {
         match self {
             TokenTree::Token(token, _) => token.span = span,
             TokenTree::Delimited(dspan, ..) => *dspan = DelimSpan::from_single(span),
@@ -90,7 +90,7 @@ impl TokenTree {
     }
 
     /// Create a `TokenTree::Token` with alone spacing.
-    pub fn token_alone(kind: TokenKind, span: Span) -> TokenTree {
+    pub fn token_alone(kind: TokenKind, span: SpanChain) -> TokenTree {
         TokenTree::Token(Token::new(kind, span), Spacing::Alone)
     }
 
@@ -213,10 +213,14 @@ impl AttrTokenStream {
                         .into_iter()
                 }
                 AttrTokenTree::Attributes(data) => {
-                    let idx = data
-                        .attrs
-                        .partition_point(|attr| matches!(attr.style, crate::AttrStyle::Outer));
-                    let (outer_attrs, inner_attrs) = data.attrs.split_at(idx);
+                    let mut outer_attrs = Vec::new();
+                    let mut inner_attrs = Vec::new();
+                    for attr in &data.attrs {
+                        match attr.style {
+                            crate::AttrStyle::Outer => outer_attrs.push(attr),
+                            crate::AttrStyle::Inner => inner_attrs.push(attr),
+                        }
+                    }
 
                     let mut target_tokens: Vec<_> = data
                         .tokens
@@ -261,10 +265,10 @@ impl AttrTokenStream {
                             "Failed to find trailing delimited group in: {target_tokens:?}"
                         );
                     }
-                    let mut flat: SmallVec<[_; 1]> =
-                        SmallVec::with_capacity(target_tokens.len() + outer_attrs.len());
+                    let mut flat: SmallVec<[_; 1]> = SmallVec::new();
                     for attr in outer_attrs {
-                        flat.extend(attr.tokens().0.iter().cloned());
+                        // FIXME: Make this more efficient
+                        flat.extend(attr.tokens().0.clone().iter().cloned());
                     }
                     flat.extend(target_tokens);
                     flat.into_iter()
@@ -323,7 +327,7 @@ pub enum Spacing {
 impl TokenStream {
     /// Given a `TokenStream` with a `Stream` of only two arguments, return a new `TokenStream`
     /// separating the two arguments with a comma for diagnostic suggestions.
-    pub fn add_comma(&self) -> Option<(TokenStream, Span)> {
+    pub fn add_comma(&self) -> Option<(TokenStream, SpanChain)> {
         // Used to suggest if a user writes `foo!(a b);`
         let mut suggestion = None;
         let mut iter = self.0.iter().enumerate().peekable();
@@ -422,12 +426,12 @@ impl TokenStream {
     }
 
     /// Create a token stream containing a single token with alone spacing.
-    pub fn token_alone(kind: TokenKind, span: Span) -> TokenStream {
+    pub fn token_alone(kind: TokenKind, span: SpanChain) -> TokenStream {
         TokenStream::new(vec![TokenTree::token_alone(kind, span)])
     }
 
     /// Create a token stream containing a single token with joint spacing.
-    pub fn token_joint(kind: TokenKind, span: Span) -> TokenStream {
+    pub fn token_joint(kind: TokenKind, span: SpanChain) -> TokenStream {
         TokenStream::new(vec![TokenTree::token_joint(kind, span)])
     }
 
@@ -605,7 +609,7 @@ impl TokenStream {
             if modified { Some(stream) } else { None }
         }
 
-        fn desugared_tts(attr_style: AttrStyle, data: Symbol, span: Span) -> Vec<TokenTree> {
+        fn desugared_tts(attr_style: AttrStyle, data: Symbol, span: SpanChain) -> Vec<TokenTree> {
             // Searches for the occurrences of `"#*` and returns the minimum number of `#`s
             // required to wrap the text. E.g.
             // - `abc d` is wrapped as `r"abc d"` (num_of_hashes = 0)
@@ -716,25 +720,25 @@ impl TokenTreeCursor {
 
 #[derive(Debug, Copy, Clone, PartialEq, Encodable, Decodable, HashStable_Generic)]
 pub struct DelimSpan {
-    pub open: Span,
-    pub close: Span,
+    pub open: SpanChain,
+    pub close: SpanChain,
 }
 
 impl DelimSpan {
-    pub fn from_single(sp: Span) -> Self {
+    pub fn from_single(sp: SpanChain) -> Self {
         DelimSpan { open: sp, close: sp }
     }
 
-    pub fn from_pair(open: Span, close: Span) -> Self {
+    pub fn from_pair(open: SpanChain, close: SpanChain) -> Self {
         DelimSpan { open, close }
     }
 
     pub fn dummy() -> Self {
-        Self::from_single(DUMMY_SP)
+        Self::from_single(DUMMY_SP_CH)
     }
 
-    pub fn entire(self) -> Span {
-        self.open.with_hi(self.close.hi())
+    pub fn entire(self) -> SpanChain {
+        self.open.with_hi_chain(self.close.hi())
     }
 }
 
