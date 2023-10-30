@@ -55,15 +55,15 @@ impl<'a> Parser<'a> {
         // Parse optional colon and param bounds.
         let mut colon_span = None;
         let bounds = if self.eat(&token::Colon) {
-            colon_span = Some(self.prev_token.span);
+            colon_span = Some(self.prev_token.span());
             // recover from `impl Trait` in type param bound
             if self.token.is_keyword(kw::Impl) {
-                let impl_span = self.token.span;
+                let impl_span = self.token.span();
                 let snapshot = self.create_snapshot_for_diagnostic();
                 match self.parse_ty() {
                     Ok(p) => {
                         if let TyKind::ImplTrait(_, bounds) = &p.kind {
-                            let span = impl_span.to(self.token.span.shrink_to_lo());
+                            let span = impl_span.to(self.token.span().shrink_to_lo());
                             let mut err = self.struct_span_err(
                                 span,
                                 "expected trait bound, found `impl Trait` type",
@@ -108,7 +108,7 @@ impl<'a> Parser<'a> {
         &mut self,
         preceding_attrs: AttrVec,
     ) -> PResult<'a, GenericParam> {
-        let const_span = self.token.span;
+        let const_span = self.token.span();
 
         self.expect_keyword(kw::Const)?;
         let ident = self.parse_ident()?;
@@ -177,7 +177,7 @@ impl<'a> Parser<'a> {
                         // `Self` as a generic param is invalid. Here we emit the diagnostic and continue parsing
                         // as if `Self` never existed.
                         this.sess.emit_err(UnexpectedSelfInGenericParameters {
-                            span: this.prev_token.span,
+                            span: this.prev_token.span(),
                         });
 
                         this.eat(&token::Comma);
@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
                         let lifetime = this.expect_lifetime();
                         // Parse lifetime parameter.
                         let (colon_span, bounds) = if this.eat(&token::Colon) {
-                            (Some(this.prev_token.span), this.parse_lt_param_bounds())
+                            (Some(this.prev_token.span()), this.parse_lt_param_bounds())
                         } else {
                             (None, Vec::new())
                         };
@@ -195,11 +195,11 @@ impl<'a> Parser<'a> {
                         if this.check_noexpect(&token::Eq)
                             && this.look_ahead(1, |t| t.is_lifetime())
                         {
-                            let lo = this.token.span;
+                            let lo = this.token.span();
                             // Parse `= 'lifetime`.
                             this.bump(); // `=`
                             this.bump(); // `'lifetime`
-                            let span = lo.to(this.prev_token.span);
+                            let span = lo.to(this.prev_token.span());
                             this.sess.emit_err(
                                 UnexpectedDefaultValueForLifetimeInGenericParameters { span },
                             );
@@ -276,20 +276,20 @@ impl<'a> Parser<'a> {
     ///                  | ( < lifetimes , typaramseq ( , )? > )
     /// where   typaramseq = ( typaram ) | ( typaram , typaramseq )
     pub(super) fn parse_generics(&mut self) -> PResult<'a, ast::Generics> {
-        let span_lo = self.token.span;
+        let span_lo = self.token.span();
         let (params, span) = if self.eat_lt() {
             let params = self.parse_generic_params()?;
             self.expect_gt()?;
-            (params, span_lo.to(self.prev_token.span))
+            (params, span_lo.to(self.prev_token.span()))
         } else {
-            (ThinVec::new(), self.prev_token.span.shrink_to_hi())
+            (ThinVec::new(), self.prev_token.span().shrink_to_hi())
         };
         Ok(ast::Generics {
             params,
             where_clause: WhereClause {
                 has_where_token: false,
                 predicates: ThinVec::new(),
-                span: self.prev_token.span.shrink_to_hi(),
+                span: self.prev_token.span().shrink_to_hi(),
             },
             span,
         })
@@ -319,7 +319,7 @@ impl<'a> Parser<'a> {
         let mut where_clause = WhereClause {
             has_where_token: false,
             predicates: ThinVec::new(),
-            span: self.prev_token.span.shrink_to_hi(),
+            span: self.prev_token.span().shrink_to_hi(),
         };
         let mut tuple_struct_body = None;
 
@@ -327,7 +327,7 @@ impl<'a> Parser<'a> {
             return Ok((where_clause, None));
         }
         where_clause.has_where_token = true;
-        let where_lo = self.prev_token.span;
+        let where_lo = self.prev_token.span();
 
         // We are considering adding generics to the `where` keyword as an alternative higher-rank
         // parameter syntax (as in `where<'a>` or `where<T>`. To avoid that being a breaking
@@ -338,8 +338,8 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            let where_sp = where_lo.to(self.prev_token.span);
-            let pred_lo = self.token.span;
+            let where_sp = where_lo.to(self.prev_token.span());
+            let pred_lo = self.token.span();
             if self.check_lifetime() && self.look_ahead(1, |t| !t.is_like_plus()) {
                 let lifetime = self.expect_lifetime();
                 // Bounds starting with a colon are mandatory, but possibly empty.
@@ -347,7 +347,7 @@ impl<'a> Parser<'a> {
                 let bounds = self.parse_lt_param_bounds();
                 where_clause.predicates.push(ast::WherePredicate::RegionPredicate(
                     ast::WhereRegionPredicate {
-                        span: pred_lo.to(self.prev_token.span),
+                        span: pred_lo.to(self.prev_token.span()),
                         lifetime,
                         bounds,
                     },
@@ -366,21 +366,21 @@ impl<'a> Parser<'a> {
                 break;
             }
 
-            let prev_token = self.prev_token.span;
+            let prev_token = self.prev_token.span();
             let ate_comma = self.eat(&token::Comma);
 
             if self.eat_keyword_noexpect(kw::Where) {
                 self.sess.emit_err(MultipleWhereClauses {
-                    span: self.token.span,
+                    span: self.token.span(),
                     previous: pred_lo,
-                    between: prev_token.shrink_to_hi().to(self.prev_token.span),
+                    between: prev_token.shrink_to_hi().to(self.prev_token.span()),
                 });
             } else if !ate_comma {
                 break;
             }
         }
 
-        where_clause.span = where_lo.to(self.prev_token.span);
+        where_clause.span = where_lo.to(self.prev_token.span());
         Ok((where_clause, tuple_struct_body))
     }
 
@@ -419,7 +419,7 @@ impl<'a> Parser<'a> {
                     {
                         type_err.cancel();
 
-                        let body_sp = pred_lo.to(snapshot.prev_token.span);
+                        let body_sp = pred_lo.to(snapshot.prev_token.span());
                         let map = self.sess.source_map();
 
                         self.sess.emit_err(WhereClauseBeforeTupleStructBody {
@@ -449,7 +449,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_ty_where_predicate(&mut self) -> PResult<'a, ast::WherePredicate> {
-        let lo = self.token.span;
+        let lo = self.token.span();
         // Parse optional `for<'a, 'b>`.
         // This `for` is parsed greedily and applies to the whole predicate,
         // the bounded type can have its own `for` applying only to it.
@@ -465,7 +465,7 @@ impl<'a> Parser<'a> {
         if self.eat(&token::Colon) {
             let bounds = self.parse_generic_bounds()?;
             Ok(ast::WherePredicate::BoundPredicate(ast::WhereBoundPredicate {
-                span: lo.to(self.prev_token.span),
+                span: lo.to(self.prev_token.span()),
                 bound_generic_params: lifetime_defs,
                 bounded_ty: ty,
                 bounds,
@@ -475,7 +475,7 @@ impl<'a> Parser<'a> {
         } else if self.eat(&token::Eq) || self.eat(&token::EqEq) {
             let rhs_ty = self.parse_ty()?;
             Ok(ast::WherePredicate::EqPredicate(ast::WhereEqPredicate {
-                span: lo.to(self.prev_token.span),
+                span: lo.to(self.prev_token.span()),
                 lhs_ty: ty,
                 rhs_ty,
             }))

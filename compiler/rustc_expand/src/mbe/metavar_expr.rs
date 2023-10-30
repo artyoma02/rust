@@ -147,7 +147,7 @@ fn parse_ident<'sess>(
             .span_diagnostic
             .struct_span_err(span, format!("expected identifier, found `{}`", &token_str));
         err.span_suggestion(
-            token.span,
+            token.span(),
             format!("try removing `{}`", &token_str),
             "",
             Applicability::MaybeIncorrect,

@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
         force_collect: ForceCollect,
     ) -> PResult<'a, Option<Stmt>> {
         let attrs = self.parse_outer_attributes()?;
-        let lo = self.token.span;
+        let lo = self.token.span();
 
         // Don't use `maybe_whole` so that we have precise control
         // over when we bump the parser
@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
 
         if self.token.is_keyword(kw::Mut) && self.is_keyword_ahead(1, &[kw::Let]) {
             self.bump();
-            let mut_let_span = lo.to(self.token.span);
+            let mut_let_span = lo.to(self.token.span());
             self.sess.emit_err(errors::InvalidVariableDeclaration {
                 span: mut_let_span,
                 sub: errors::InvalidVariableDeclarationSub::SwitchMutLetOrder(mut_let_span),
@@ -165,7 +165,7 @@ impl<'a> Parser<'a> {
             let expr = if this.eat(&token::OpenDelim(Delimiter::Brace)) {
                 this.parse_expr_struct(None, path, true)?
             } else {
-                let hi = this.prev_token.span;
+                let hi = this.prev_token.span();
                 this.mk_expr(lo.to(hi), ExprKind::Path(None, path))
             };
 
@@ -185,7 +185,7 @@ impl<'a> Parser<'a> {
                     LhsExpr::AlreadyParsed { expr, starts_statement: true },
                 )
             })?;
-            Ok(self.mk_stmt(lo.to(self.prev_token.span), StmtKind::Expr(expr)))
+            Ok(self.mk_stmt(lo.to(self.prev_token.span()), StmtKind::Expr(expr)))
         } else {
             Ok(stmt)
         }
@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
     /// At this point, the `!` token after the path has already been eaten.
     fn parse_stmt_mac(&mut self, lo: Span, attrs: AttrVec, path: ast::Path) -> PResult<'a, Stmt> {
         let args = self.parse_delim_args()?;
-        let hi = self.prev_token.span;
+        let hi = self.prev_token.span();
 
         let style = match args.delim {
             Delimiter::Brace => MacStmtStyle::Braces,
@@ -254,7 +254,7 @@ impl<'a> Parser<'a> {
                 let local = this.parse_local(attrs)?;
                 // FIXME - maybe capture semicolon in recovery?
                 Ok((
-                    this.mk_stmt(lo.to(this.prev_token.span), StmtKind::Local(local)),
+                    this.mk_stmt(lo.to(this.prev_token.span()), StmtKind::Local(local)),
                     TrailingToken::None,
                 ))
             })?;
@@ -277,16 +277,17 @@ impl<'a> Parser<'a> {
             } else {
                 TrailingToken::None
             };
-            Ok((this.mk_stmt(lo.to(this.prev_token.span), StmtKind::Local(local)), trailing))
+            Ok((this.mk_stmt(lo.to(this.prev_token.span()), StmtKind::Local(local)), trailing))
         })
     }
 
     /// Parses a local variable declaration.
     fn parse_local(&mut self, attrs: AttrVec) -> PResult<'a, P<Local>> {
-        let lo = self.prev_token.span;
+        let lo = self.prev_token.span();
 
         if self.token.is_keyword(kw::Const) && self.look_ahead(1, |t| t.is_ident()) {
-            self.sess.emit_err(errors::ConstLetMutuallyExclusive { span: lo.to(self.token.span) });
+            self.sess
+                .emit_err(errors::ConstLetMutuallyExclusive { span: lo.to(self.token.span()) });
             self.bump();
         }
 
@@ -297,7 +298,7 @@ impl<'a> Parser<'a> {
             // Save the state of the parser before parsing type normally, in case there is a `:`
             // instead of an `=` typo.
             let parser_snapshot_before_type = self.clone();
-            let colon_sp = self.prev_token.span;
+            let colon_sp = self.prev_token.span();
             match self.parse_ty() {
                 Ok(ty) => (None, Some(ty)),
                 Err(mut err) => {
@@ -378,7 +379,7 @@ impl<'a> Parser<'a> {
                 }
             }
         };
-        let hi = if self.token == token::Semi { self.token.span } else { self.prev_token.span };
+        let hi = if self.token == token::Semi { self.token.span() } else { self.prev_token.span() };
         Ok(P(ast::Local { ty, pat, kind, id: DUMMY_NODE_ID, span: lo.to(hi), attrs, tokens: None }))
     }
 
@@ -414,8 +415,9 @@ impl<'a> Parser<'a> {
         let eq_consumed = match self.token.kind {
             token::BinOpEq(..) => {
                 // Recover `let x <op>= 1` as `let x = 1`
-                self.sess
-                    .emit_err(errors::CompoundAssignmentExpressionInLet { span: self.token.span });
+                self.sess.emit_err(errors::CompoundAssignmentExpressionInLet {
+                    span: self.token.span(),
+                });
                 self.bump();
                 true
             }
@@ -443,7 +445,7 @@ impl<'a> Parser<'a> {
         &mut self,
         msg: Cow<'static, str>,
     ) -> DiagnosticBuilder<'a, ErrorGuaranteed> {
-        let sp = self.token.span;
+        let sp = self.token.span();
         let mut e = self.struct_span_err(sp, msg);
         let do_not_suggest_help = self.token.is_keyword(kw::In) || self.token == token::Colon;
 
@@ -478,7 +480,7 @@ impl<'a> Parser<'a> {
                 let stmt_own_line = self.sess.source_map().is_line_before_span_empty(sp);
                 let stmt_span = if stmt_own_line && self.eat(&token::Semi) {
                     // Expand the span to include the semicolon.
-                    stmt.span.with_hi(self.prev_token.span.hi())
+                    stmt.span.with_hi(self.prev_token.span().hi())
                 } else {
                     stmt.span
                 };
@@ -510,7 +512,7 @@ impl<'a> Parser<'a> {
 
     /// Parses a block. Inner attributes are allowed.
     pub(super) fn parse_inner_attrs_and_block(&mut self) -> PResult<'a, (AttrVec, P<Block>)> {
-        self.parse_block_common(self.token.span, BlockCheckMode::Default, true)
+        self.parse_block_common(self.token.span(), BlockCheckMode::Default, true)
     }
 
     /// Parses a block. Inner attributes are allowed.
@@ -570,9 +572,9 @@ impl<'a> Parser<'a> {
                         // if next token is following a colon, it's likely a path
                         // and we can suggest a path separator
                         self.bump();
-                        if self.token.span.lo() == self.prev_token.span.hi() {
+                        if self.token.span().lo() == self.prev_token.span().hi() {
                             err.span_suggestion_verbose(
-                                self.prev_token.span,
+                                self.prev_token.span(),
                                 "maybe write a path separator here",
                                 "::",
                                 Applicability::MaybeIncorrect,
@@ -586,7 +588,7 @@ impl<'a> Parser<'a> {
 
                     err.emit();
                     self.recover_stmt_(SemiColonMode::Ignore, BlockMode::Ignore);
-                    Some(self.mk_stmt_err(self.token.span))
+                    Some(self.mk_stmt_err(self.token.span()))
                 }
                 Ok(stmt) => stmt,
                 Err(err) => return Err(err),
@@ -598,7 +600,7 @@ impl<'a> Parser<'a> {
                 continue;
             };
         }
-        Ok(self.mk_block(stmts, s, lo.to(self.prev_token.span)))
+        Ok(self.mk_block(stmts, s, lo.to(self.prev_token.span())))
     }
 
     /// Parses a statement, including the trailing semicolon.
@@ -702,7 +704,7 @@ impl<'a> Parser<'a> {
 
                 if replace_with_err {
                     // We already emitted an error, so don't emit another type error
-                    let sp = expr.span.to(self.prev_token.span);
+                    let sp = expr.span.to(self.prev_token.span());
                     *expr = self.mk_expr_err(sp);
                 }
             }
@@ -728,7 +730,7 @@ impl<'a> Parser<'a> {
             stmt = stmt.add_trailing_semicolon();
         }
 
-        stmt.span = stmt.span.to(self.prev_token.span);
+        stmt.span = stmt.span.to(self.prev_token.span());
         Ok(Some(stmt))
     }
 

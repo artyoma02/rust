@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
             NonterminalKind::Item => match self.parse_item(ForceCollect::Yes)? {
                 Some(item) => NtItem(item),
                 None => {
-                    return Err(UnexpectedNonterminal::Item(self.token.span)
+                    return Err(UnexpectedNonterminal::Item(self.token.span())
                         .into_diagnostic(&self.sess.span_diagnostic));
                 }
             },
@@ -126,7 +126,7 @@ impl<'a> Parser<'a> {
             NonterminalKind::Stmt => match self.parse_stmt(ForceCollect::Yes)? {
                 Some(s) => NtStmt(P(s)),
                 None => {
-                    return Err(UnexpectedNonterminal::Statement(self.token.span)
+                    return Err(UnexpectedNonterminal::Statement(self.token.span())
                         .into_diagnostic(&self.sess.span_diagnostic));
                 }
             },
@@ -160,7 +160,7 @@ impl<'a> Parser<'a> {
             }
             NonterminalKind::Ident => {
                 return Err(UnexpectedNonterminal::Ident {
-                    span: self.token.span,
+                    span: self.token.span(),
                     token: self.token.clone(),
                 }
                 .into_diagnostic(&self.sess.span_diagnostic));
@@ -178,7 +178,7 @@ impl<'a> Parser<'a> {
                     NtLifetime(self.expect_lifetime().ident)
                 } else {
                     return Err(UnexpectedNonterminal::Lifetime {
-                        span: self.token.span,
+                        span: self.token.span(),
                         token: self.token.clone(),
                     }
                     .into_diagnostic(&self.sess.span_diagnostic));

@@ -113,7 +113,7 @@ macro_rules! maybe_recover_from_interpolated_ty_qpath {
                 {
                     let ty = ty.clone();
                     $self.bump();
-                    return $self.maybe_recover_from_bad_qpath_stage_2($self.prev_token.span, ty);
+                    return $self.maybe_recover_from_bad_qpath_stage_2($self.prev_token.span(), ty);
                 }
     };
 }
@@ -465,7 +465,7 @@ impl<'a> Parser<'a> {
             // leave it in the input
             Ok(false)
         } else if self.token.kind != token::Eof
-            && self.last_unexpected_token_span == Some(self.token.span)
+            && self.last_unexpected_token_span == Some(self.token.span())
         {
             FatalError.raise();
         } else {
@@ -684,8 +684,8 @@ impl<'a> Parser<'a> {
         }
         match self.token.kind.break_two_token_op() {
             Some((first, second)) if first == expected => {
-                let first_span = self.sess.source_map().start_point(self.token.span);
-                let second_span = self.token.span.with_lo(first_span.hi());
+                let first_span = self.sess.source_map().start_point(self.token.span());
+                let second_span = self.token.span().with_lo(first_span.hi());
                 self.token = Token::new(first, first_span);
                 // Keep track of this token - if we end token capturing now,
                 // we'll want to append this token to the captured stream.
@@ -793,7 +793,7 @@ impl<'a> Parser<'a> {
                             break;
                         }
                         Err(mut expect_err) => {
-                            let sp = self.prev_token.span.shrink_to_hi();
+                            let sp = self.prev_token.span().shrink_to_hi();
                             let token_str = pprust::token_kind_to_string(t);
 
                             match self.current_closure.take() {
@@ -833,7 +833,10 @@ impl<'a> Parser<'a> {
                                 );
                                 expect_err
                                     .span_suggestion_verbose(
-                                        self.prev_token.span.shrink_to_hi().until(self.token.span),
+                                        self.prev_token
+                                            .span()
+                                            .shrink_to_hi()
+                                            .until(self.token.span()),
                                         msg,
                                         " @ ",
                                         Applicability::MaybeIncorrect,
@@ -897,7 +900,7 @@ impl<'a> Parser<'a> {
         closure_spans: ClosureSpans,
         mut expect_err: DiagnosticBuilder<'_, ErrorGuaranteed>,
     ) -> PResult<'a, ()> {
-        let initial_semicolon = self.token.span;
+        let initial_semicolon = self.token.span();
 
         while self.eat(&TokenKind::Semi) {
             let _ =
@@ -912,7 +915,7 @@ impl<'a> Parser<'a> {
         );
 
         let preceding_pipe_span = closure_spans.closing_pipe;
-        let following_token_span = self.token.span;
+        let following_token_span = self.token.span();
 
         let mut first_note = MultiSpan::from(vec![initial_semicolon]);
         first_note.push_span_label(
@@ -1040,10 +1043,10 @@ impl<'a> Parser<'a> {
         // cursor, so we no longer need to worry about
         // an unglued token. See `break_and_eat` for more details
         self.break_last_token = false;
-        if next.0.span.is_dummy() {
+        if next.0.span().is_dummy() {
             // Tweak the location for better diagnostics, but keep syntactic context intact.
-            let fallback_span = self.token.span;
-            next.0.span = fallback_span.with_ctxt(next.0.span.ctxt());
+            let fallback_span = self.token.span();
+            next.0.set_span(fallback_span.with_ctxt(next.0.span().ctxt()));
         }
         debug_assert!(!matches!(
             next.0.kind,
@@ -1199,10 +1202,10 @@ impl<'a> Parser<'a> {
         if let token::Literal(token::Lit { kind: token::Integer, symbol, suffix }) = self.token.kind
         {
             if let Some(suffix) = suffix {
-                self.expect_no_tuple_index_suffix(self.token.span, suffix);
+                self.expect_no_tuple_index_suffix(self.token.span(), suffix);
             }
             self.bump();
-            Ok(Ident::new(symbol, self.prev_token.span))
+            Ok(Ident::new(symbol, self.prev_token.span()))
         } else {
             self.parse_ident_common(true)
         }
@@ -1217,7 +1220,7 @@ impl<'a> Parser<'a> {
             AttrArgs::Delimited(args)
         } else {
             if self.eat(&token::Eq) {
-                let eq_span = self.prev_token.span;
+                let eq_span = self.prev_token.span();
                 AttrArgs::Eq(eq_span, AttrArgsEq::Ast(self.parse_expr_force_collect()?))
             } else {
                 AttrArgs::Empty
@@ -1321,12 +1324,12 @@ impl<'a> Parser<'a> {
             // keyword to grab a span from for inherited visibility; an empty span at the
             // beginning of the current token would seem to be the "Schelling span".
             return Ok(Visibility {
-                span: self.token.span.shrink_to_lo(),
+                span: self.token.span().shrink_to_lo(),
                 kind: VisibilityKind::Inherited,
                 tokens: None,
             });
         }
-        let lo = self.prev_token.span;
+        let lo = self.prev_token.span();
 
         if self.check(&token::OpenDelim(Delimiter::Parenthesis)) {
             // We don't `self.bump()` the `(` yet because this might be a struct definition where
@@ -1345,7 +1348,7 @@ impl<'a> Parser<'a> {
                     shorthand: false,
                 };
                 return Ok(Visibility {
-                    span: lo.to(self.prev_token.span),
+                    span: lo.to(self.prev_token.span()),
                     kind: vis,
                     tokens: None,
                 });
@@ -1362,7 +1365,7 @@ impl<'a> Parser<'a> {
                     shorthand: true,
                 };
                 return Ok(Visibility {
-                    span: lo.to(self.prev_token.span),
+                    span: lo.to(self.prev_token.span()),
                     kind: vis,
                     tokens: None,
                 });
@@ -1392,7 +1395,7 @@ impl<'a> Parser<'a> {
     /// Parses `extern string_literal?`.
     fn parse_extern(&mut self, case: Case) -> Extern {
         if self.eat_keyword_case(kw::Extern, case) {
-            let mut extern_span = self.prev_token.span;
+            let mut extern_span = self.prev_token.span();
             let abi = self.parse_abi();
             if let Some(abi) = abi {
                 extern_span = extern_span.to(abi.span);
@@ -1490,6 +1493,15 @@ pub enum FlatToken {
     /// handling of replace ranges.
     Empty,
 }
+
+// impl FlatToken {
+//     pub fn span(&self) -> Span {
+//         match self {
+//             FlatToken::Token(token, spacing) => token.span(),
+//             _ => DUMMY_SP,
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 pub enum ParseNtResult {

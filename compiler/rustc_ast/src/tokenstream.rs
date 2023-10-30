@@ -76,7 +76,7 @@ impl TokenTree {
     /// Retrieves the `TokenTree`'s span.
     pub fn span(&self) -> Span {
         match self {
-            TokenTree::Token(token, _) => token.span,
+            TokenTree::Token(token, _) => token.span(),
             TokenTree::Delimited(sp, ..) => sp.entire(),
         }
     }
@@ -84,7 +84,7 @@ impl TokenTree {
     /// Modify the `TokenTree`'s span in-place.
     pub fn set_span(&mut self, span: Span) {
         match self {
-            TokenTree::Token(token, _) => token.span = span,
+            TokenTree::Token(token, _) => token.set_span(span),
             TokenTree::Delimited(dspan, ..) => *dspan = DelimSpan::from_single(span),
         }
     }
@@ -339,7 +339,7 @@ impl TokenStream {
                         && ((token_right.is_ident() && !token_right.is_reserved_ident())
                             || token_right.is_lit()) =>
                     {
-                        token_left.span
+                        token_left.span()
                     }
                     (TokenTree::Delimited(sp, ..), _) => sp.entire(),
                     _ => continue,
@@ -481,7 +481,7 @@ impl TokenStream {
                 TokenTree::Token(Token::new(token::Ident(ident.name, is_raw), ident.span), spacing)
             }
             token::Interpolated(nt) => TokenTree::Delimited(
-                DelimSpan::from_single(token.span),
+                DelimSpan::from_single(token.span()),
                 Delimiter::Invisible,
                 TokenStream::from_nonterminal_ast(nt).flattened(),
             ),
@@ -580,9 +580,10 @@ impl TokenStream {
             while let Some(tt) = stream.0.get(i) {
                 match tt {
                     &TokenTree::Token(
-                        Token { kind: token::DocComment(_, attr_style, data), span },
+                        Token { kind: token::DocComment(_, attr_style, data), .. },
                         _spacing,
                     ) => {
+                        let span = tt.span();
                         let desugared = desugared_tts(attr_style, data, span);
                         let desugared_len = desugared.len();
                         Lrc::make_mut(&mut stream.0).splice(i..i + 1, desugared);

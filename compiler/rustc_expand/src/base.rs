@@ -1348,7 +1348,7 @@ pub fn get_exprs_from_tts(cx: &mut ExtCtxt<'_>, tts: TokenStream) -> Option<Vec<
             continue;
         }
         if p.token != token::Eof {
-            cx.emit_err(errors::ExpectedCommaInList { span: p.token.span });
+            cx.emit_err(errors::ExpectedCommaInList { span: p.token.span() });
             return None;
         }
     }

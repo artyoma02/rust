@@ -945,7 +945,7 @@ pub fn ensure_complete_parse<'a>(
     if parser.token != token::Eof {
         let token = pprust::token_to_string(&parser.token);
         // Avoid emitting backtrace info twice.
-        let def_site_span = parser.token.span.with_ctxt(SyntaxContext::root());
+        let def_site_span = parser.token.span().with_ctxt(SyntaxContext::root());
 
         let semi_span = parser.sess.source_map().next_point(span);
         let add_semicolon = match &parser.sess.source_map().span_to_snippet(semi_span) {

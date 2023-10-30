@@ -135,7 +135,7 @@ pub(crate) enum MatcherLoc {
 impl MatcherLoc {
     pub(super) fn span(&self) -> Option<Span> {
         match self {
-            MatcherLoc::Token { token } => Some(token.span),
+            MatcherLoc::Token { token } => Some(token.span()),
             MatcherLoc::Delimited => None,
             MatcherLoc::Sequence { .. } => None,
             MatcherLoc::SequenceKleeneOpNoSep { .. } => None,
@@ -595,12 +595,16 @@ impl TtParser {
                     self.nameize(matcher, matches)
                 }
                 EofMatcherPositions::Multiple => {
-                    Error(token.span, "ambiguity: multiple successful parses".to_string())
+                    Error(token.span(), "ambiguity: multiple successful parses".to_string())
                 }
                 EofMatcherPositions::None => Failure(T::build_failure(
                     Token::new(
                         token::Eof,
-                        if token.span.is_dummy() { token.span } else { token.span.shrink_to_hi() },
+                        if token.span().is_dummy() {
+                            token.span()
+                        } else {
+                            token.span().shrink_to_hi()
+                        },
                     ),
                     approx_position,
                     "missing tokens in macro arguments",
@@ -705,7 +709,7 @@ impl TtParser {
 
                 (_, _) => {
                     // Too many possibilities!
-                    return self.ambiguity_error(matcher, parser.token.span);
+                    return self.ambiguity_error(matcher, parser.token.span());
                 }
             }
 

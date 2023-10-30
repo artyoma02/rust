@@ -823,7 +823,7 @@ pub trait PrintState<'a>: std::ops::Deref<Target = pp::Printer> + std::ops::Dere
     }
 
     fn token_to_string_ext(&self, token: &Token, convert_dollar_crate: bool) -> Cow<'static, str> {
-        let convert_dollar_crate = convert_dollar_crate.then_some(token.span);
+        let convert_dollar_crate = convert_dollar_crate.then_some(token.span());
         self.token_kind_to_string_ext(&token.kind, convert_dollar_crate)
     }
 

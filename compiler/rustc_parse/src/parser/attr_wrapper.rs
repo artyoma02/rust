@@ -397,10 +397,18 @@ fn make_token_stream(
     let mut token_and_spacing = iter.next();
     while let Some((token, spacing)) = token_and_spacing {
         match token {
-            FlatToken::Token(Token { kind: TokenKind::OpenDelim(delim), span }) => {
+            FlatToken::Token(Token { kind: TokenKind::OpenDelim(delim), .. }) => {
+                let span: Span = match token {
+                    FlatToken::Token(ref token) => token.span(),
+                    FlatToken::AttrTarget(_) | FlatToken::Empty => Span::default(),
+                };
                 stack.push(FrameData { open_delim_sp: Some((delim, span)), inner: vec![] });
             }
-            FlatToken::Token(Token { kind: TokenKind::CloseDelim(delim), span }) => {
+            FlatToken::Token(Token { kind: TokenKind::CloseDelim(delim), .. }) => {
+                let span: Span = match token {
+                    FlatToken::Token(ref token) => token.span(),
+                    FlatToken::AttrTarget(_) | FlatToken::Empty => Span::default(),
+                };
                 let frame_data = stack
                     .pop()
                     .unwrap_or_else(|| panic!("Token stack was empty for token: {token:?}"));
@@ -440,7 +448,7 @@ fn make_token_stream(
             let unglued_first = last_token.kind.break_two_token_op().unwrap().0;
 
             // An 'unglued' token is always two ASCII characters
-            let mut first_span = last_token.span.shrink_to_lo();
+            let mut first_span = last_token.span().shrink_to_lo();
             first_span = first_span.with_hi(first_span.lo() + rustc_span::BytePos(1));
 
             final_buf

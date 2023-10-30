@@ -750,7 +750,7 @@ pub fn visit_lazy_tts<T: MutVisitor>(lazy_tts: &mut Option<LazyAttrTokenStream>,
 /// but there's a test below checking that it works.
 // No `noop_` prefix because there isn't a corresponding method in `MutVisitor`.
 pub fn visit_token<T: MutVisitor>(t: &mut Token, vis: &mut T) {
-    let Token { kind, span } = t;
+    let (kind, span) = t.mutab();
     match kind {
         token::Ident(name, _) | token::Lifetime(name) => {
             let mut ident = Ident::new(*name, *span);

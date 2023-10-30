@@ -340,7 +340,7 @@ impl Clone for TokenKind {
 #[derive(Clone, PartialEq, Encodable, Decodable, Debug, HashStable_Generic)]
 pub struct Token {
     pub kind: TokenKind,
-    pub span: Span,
+    span: Span,
 }
 
 impl TokenKind {
@@ -425,6 +425,18 @@ impl Token {
         }
     }
 
+    pub fn span(&self) -> Span {
+        self.span
+    }
+
+    pub fn mutab(&mut self) -> (&mut TokenKind, &mut Span) {
+        (&mut self.kind, &mut self.span)
+    }
+
+    pub fn set_span(&mut self, new_span: Span) {
+        self.span = new_span;
+    }
+
     pub fn is_range_separator(&self) -> bool {
         [DotDot, DotDotDot, DotDotEq].contains(&self.kind)
     }
@@ -448,7 +460,7 @@ impl Token {
     pub fn can_begin_expr(&self) -> bool {
         match self.uninterpolate().kind {
             Ident(name, is_raw)              =>
-                ident_can_begin_expr(name, self.span, is_raw), // value name or keyword
+                ident_can_begin_expr(name, self.span(), is_raw), // value name or keyword
             OpenDelim(..)                     | // tuple, array or block
             Literal(..)                       | // literal
             Not                               | // operator not
@@ -477,7 +489,7 @@ impl Token {
     pub fn can_begin_pattern(&self) -> bool {
         match self.uninterpolate().kind {
             Ident(name, is_raw)              =>
-                ident_can_begin_expr(name, self.span, is_raw), // value name or keyword
+                ident_can_begin_expr(name, self.span(), is_raw), // value name or keyword
             | OpenDelim(Delimiter::Bracket | Delimiter::Parenthesis)  // tuple or array
             | Literal(..)                        // literal
             | BinOp(Minus)                       // unary minus
@@ -499,7 +511,7 @@ impl Token {
     pub fn can_begin_type(&self) -> bool {
         match self.uninterpolate().kind {
             Ident(name, is_raw)        =>
-                ident_can_begin_type(name, self.span, is_raw), // type name or keyword
+                ident_can_begin_type(name, self.span(), is_raw), // type name or keyword
             OpenDelim(Delimiter::Parenthesis) | // tuple
             OpenDelim(Delimiter::Bracket)     | // array
             Not                         | // never
@@ -612,7 +624,7 @@ impl Token {
     pub fn ident(&self) -> Option<(Ident, /* is_raw */ bool)> {
         // We avoid using `Token::uninterpolate` here because it's slow.
         match &self.kind {
-            &Ident(name, is_raw) => Some((Ident::new(name, self.span), is_raw)),
+            &Ident(name, is_raw) => Some((Ident::new(name, self.span()), is_raw)),
             Interpolated(nt) => match **nt {
                 NtIdent(ident, is_raw) => Some((ident, is_raw)),
                 _ => None,
@@ -626,7 +638,7 @@ impl Token {
     pub fn lifetime(&self) -> Option<Ident> {
         // We avoid using `Token::uninterpolate` here because it's slow.
         match &self.kind {
-            &Lifetime(name) => Some(Ident::new(name, self.span)),
+            &Lifetime(name) => Some(Ident::new(name, self.span())),
             Interpolated(nt) => match **nt {
                 NtLifetime(ident) => Some(ident),
                 _ => None,

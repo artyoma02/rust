@@ -409,10 +409,10 @@ impl server::FreeFunctions for Rustc<'_, '_> {
         let name = FileName::proc_macro_source_code(s);
         let mut parser = rustc_parse::new_parser_from_source_str(self.sess(), name, s.to_owned());
 
-        let first_span = parser.token.span.data();
+        let first_span = parser.token.span().data();
         let minus_present = parser.eat(&token::BinOp(token::Minus));
 
-        let lit_span = parser.token.span.data();
+        let lit_span = parser.token.span().data();
         let token::Literal(mut lit) = parser.token.kind else {
             return Err(());
         };

@@ -308,9 +308,12 @@ impl MetaItem {
         // FIXME: Share code with `parse_path`.
         let path = match tokens.next().map(|tt| TokenTree::uninterpolate(tt)).as_deref() {
             Some(&TokenTree::Token(
-                Token { kind: ref kind @ (token::Ident(..) | token::ModSep), span },
+                Token { kind: ref kind @ (token::Ident(..) | token::ModSep), .. },
                 _,
             )) => 'arm: {
+                let binding = tokens.next().map(|tt| TokenTree::uninterpolate(tt));
+                let unwraped = binding.as_deref().unwrap();
+                let span = unwraped.span();
                 let mut segments = if let &token::Ident(name, _) = kind {
                     if let Some(TokenTree::Token(Token { kind: token::ModSep, .. }, _)) =
                         tokens.peek()
@@ -324,9 +327,12 @@ impl MetaItem {
                     thin_vec![PathSegment::path_root(span)]
                 };
                 loop {
-                    if let Some(&TokenTree::Token(Token { kind: token::Ident(name, _), span }, _)) =
+                    if let Some(&TokenTree::Token(Token { kind: token::Ident(name, _), .. }, _)) =
                         tokens.next().map(|tt| TokenTree::uninterpolate(tt)).as_deref()
                     {
+                        let binding = tokens.next().map(|tt| TokenTree::uninterpolate(tt));
+                        let unwraped = binding.as_deref().unwrap();
+                        let span = unwraped.span();
                         segments.push(PathSegment::from_ident(Ident::new(name, span)));
                     } else {
                         return None;

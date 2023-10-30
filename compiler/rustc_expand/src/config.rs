@@ -263,7 +263,7 @@ impl<'a> StripUnconfigured<'a> {
                 AttrTokenTree::Token(ref token, _)
                     if let TokenKind::Interpolated(nt) = &token.kind =>
                 {
-                    panic!("Nonterminal should have been flattened at {:?}: {:?}", token.span, nt);
+                    panic!("Nonterminal should have been flattened at {:?}: {:?}", token.span(), nt);
                 }
                 AttrTokenTree::Token(token, spacing) => {
                     Some(AttrTokenTree::Token(token, spacing)).into_iter()
@@ -361,7 +361,7 @@ impl<'a> StripUnconfigured<'a> {
         else {
             panic!("Bad tokens for attribute {attr:?}");
         };
-        let pound_span = pound_token.span;
+        let pound_span = pound_token.span();
 
         let mut trees = vec![AttrTokenTree::Token(pound_token, Spacing::Alone)];
         if attr.style == AttrStyle::Inner {

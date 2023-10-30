@@ -136,7 +136,7 @@ fn maybe_source_file_to_parser(
     let stream = maybe_file_to_stream(sess, source_file, None)?;
     let mut parser = stream_to_parser(sess, stream, None);
     if parser.token == token::Eof {
-        parser.token.span = Span::new(end_pos, end_pos, parser.token.span.ctxt(), None);
+        parser.token.set_span(Span::new(end_pos, end_pos, parser.token.span().ctxt(), None));
     }
 
     Ok(parser)

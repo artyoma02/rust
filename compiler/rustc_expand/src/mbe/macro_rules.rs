@@ -77,7 +77,7 @@ impl<'a> ParserAnyMacro<'a> {
             if is_local {
                 parser.sess.buffer_lint_with_diagnostic(
                     SEMICOLON_IN_EXPRESSIONS_FROM_MACROS,
-                    parser.token.span,
+                    parser.token.span(),
                     lint_node_id,
                     "trailing semicolon in macro used in expression position",
                     BuiltinLintDiagnostics::TrailingMacro(is_trailing_mac, macro_ident),
@@ -474,7 +474,7 @@ pub fn compile_declarative_macro(
                 };
 
                 let s = parse_failure_msg(&token);
-                let sp = token.span.substitute_dummy(def.span);
+                let sp = token.span().substitute_dummy(def.span);
                 let mut err = sess.parse_sess.span_diagnostic.struct_span_err(sp, s);
                 err.span_label(sp, msg);
                 annotate_doc_comment(&mut err, sess.source_map(), sp);
@@ -647,7 +647,7 @@ fn is_empty_token_tree(sess: &ParseSess, seq: &mbe::SequenceRepetition) -> bool 
                         now = next;
                         iter.next();
                     }
-                    let span = t.span.to(now.span);
+                    let span = t.span().to(now.span());
                     sess.span_diagnostic.span_note_without_error(
                         span,
                         "doc comments are ignored in matcher position",

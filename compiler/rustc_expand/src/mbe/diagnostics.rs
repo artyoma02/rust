@@ -47,7 +47,7 @@ pub(super) fn failed_to_match_macro<'cx>(
         return DummyResult::any(sp);
     };
 
-    let span = token.span.substitute_dummy(sp);
+    let span = token.span().substitute_dummy(sp);
 
     let mut err = cx.struct_span_err(span, parse_failure_msg(&token));
     err.span_label(span, label);
@@ -231,7 +231,7 @@ pub(super) fn emit_frag_parse_err(
         );
         if !e.span.is_dummy() {
             // early end of macro arm (#52866)
-            e.replace_span_with(parser.token.span.shrink_to_hi(), true);
+            e.replace_span_with(parser.token.span().shrink_to_hi(), true);
         }
     }
     if e.span.is_dummy() {
@@ -240,7 +240,7 @@ pub(super) fn emit_frag_parse_err(
         if !parser.sess.source_map().is_imported(arm_span) {
             e.span_label(arm_span, "in this macro arm");
         }
-    } else if parser.sess.source_map().is_imported(parser.token.span) {
+    } else if parser.sess.source_map().is_imported(parser.token.span()) {
         e.span_label(site_span, "in this macro invocation");
     }
     match kind {

@@ -74,13 +74,14 @@ impl<'a> TokenTreesReader<'a> {
 
     fn eof_err(&mut self) -> PErr<'a> {
         let msg = "this file contains an unclosed delimiter";
-        let mut err = self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span, msg);
+        let mut err =
+            self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span(), msg);
         for &(_, sp) in &self.diag_info.open_braces {
             err.span_label(sp, "unclosed delimiter");
             self.diag_info.unmatched_delims.push(UnmatchedDelim {
                 expected_delim: Delimiter::Brace,
                 found_delim: None,
-                found_span: self.token.span,
+                found_span: self.token.span(),
                 unclosed_span: Some(sp),
                 candidate_span: None,
             });
@@ -99,9 +100,9 @@ impl<'a> TokenTreesReader<'a> {
 
     fn parse_token_tree_open_delim(&mut self, open_delim: Delimiter) -> PResult<'a, TokenTree> {
         // The span for beginning of the delimited section
-        let pre_span = self.token.span;
+        let pre_span = self.token.span();
 
-        self.diag_info.open_braces.push((open_delim, self.token.span));
+        self.diag_info.open_braces.push((open_delim, self.token.span()));
 
         // Parse the token trees within the delimiters.
         // We stop at any delimiter so we can try to recover if the user
@@ -109,14 +110,14 @@ impl<'a> TokenTreesReader<'a> {
         let tts = self.parse_token_trees(/* is_delimited */ true)?;
 
         // Expand to cover the entire delimited token tree
-        let delim_span = DelimSpan::from_pair(pre_span, self.token.span);
+        let delim_span = DelimSpan::from_pair(pre_span, self.token.span());
         let sm = self.string_reader.sess.source_map();
 
         match self.token.kind {
             // Correct delimiter.
             token::CloseDelim(close_delim) if close_delim == open_delim => {
                 let (open_brace, open_brace_span) = self.diag_info.open_braces.pop().unwrap();
-                let close_brace_span = self.token.span;
+                let close_brace_span = self.token.span();
 
                 if tts.is_empty() && close_delim == Delimiter::Brace {
                     let empty_block_span = open_brace_span.to(close_brace_span);
@@ -141,9 +142,9 @@ impl<'a> TokenTreesReader<'a> {
                 let mut unclosed_delimiter = None;
                 let mut candidate = None;
 
-                if self.diag_info.last_unclosed_found_span != Some(self.token.span) {
+                if self.diag_info.last_unclosed_found_span != Some(self.token.span()) {
                     // do not complain about the same unclosed delimiter multiple times
-                    self.diag_info.last_unclosed_found_span = Some(self.token.span);
+                    self.diag_info.last_unclosed_found_span = Some(self.token.span());
                     // This is a conservative error: only report the last unclosed
                     // delimiter. The previous unclosed delimiters could actually be
                     // closed! The parser just hasn't gotten to them yet.
@@ -151,7 +152,7 @@ impl<'a> TokenTreesReader<'a> {
                         unclosed_delimiter = Some(sp);
                     };
                     for (brace, brace_span) in &self.diag_info.open_braces {
-                        if same_indentation_level(&sm, self.token.span, *brace_span)
+                        if same_indentation_level(&sm, self.token.span(), *brace_span)
                             && brace == &close_delim
                         {
                             // high likelihood of these two corresponding
@@ -162,7 +163,7 @@ impl<'a> TokenTreesReader<'a> {
                     self.diag_info.unmatched_delims.push(UnmatchedDelim {
                         expected_delim: tok,
                         found_delim: Some(close_delim),
-                        found_span: self.token.span,
+                        found_span: self.token.span(),
                         unclosed_span: unclosed_delimiter,
                         candidate_span: candidate,
                     });
@@ -197,7 +198,8 @@ impl<'a> TokenTreesReader<'a> {
         // matching opening delimiter).
         let token_str = token_to_string(&self.token);
         let msg = format!("unexpected closing delimiter: `{token_str}`");
-        let mut err = self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span, msg);
+        let mut err =
+            self.string_reader.sess.span_diagnostic.struct_span_err(self.token.span(), msg);
 
         report_suspicious_mismatch_block(
             &mut err,
@@ -205,7 +207,7 @@ impl<'a> TokenTreesReader<'a> {
             &self.string_reader.sess.source_map(),
             delim,
         );
-        err.span_label(self.token.span, "unexpected closing delimiter");
+        err.span_label(self.token.span(), "unexpected closing delimiter");
         err
     }
 }

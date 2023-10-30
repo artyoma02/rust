@@ -236,7 +236,7 @@ impl<'a> Parser<'a> {
             // Don't `eat` to prevent `=>` from being added as an expected token which isn't
             // actually expected and could only confuse users
             self.bump();
-            self.sess.emit_err(ReturnTypesUseThinArrow { span: self.prev_token.span });
+            self.sess.emit_err(ReturnTypesUseThinArrow { span: self.prev_token.span() });
             let ty = self.parse_ty_common(
                 allow_plus,
                 AllowCVariadic::No,
@@ -247,7 +247,7 @@ impl<'a> Parser<'a> {
             )?;
             FnRetTy::Ty(ty)
         } else {
-            FnRetTy::Default(self.prev_token.span.shrink_to_hi())
+            FnRetTy::Default(self.prev_token.span().shrink_to_hi())
         })
     }
 
@@ -264,7 +264,7 @@ impl<'a> Parser<'a> {
         maybe_recover_from_interpolated_ty_qpath!(self, allow_qpath_recovery);
         maybe_whole!(self, NtTy, |x| x);
 
-        let lo = self.token.span;
+        let lo = self.token.span();
         let mut impl_dyn_multi = false;
         let kind = if self.check(&token::OpenDelim(Delimiter::Parenthesis)) {
             self.parse_ty_tuple_or_parens(lo, allow_plus)?
@@ -296,7 +296,7 @@ impl<'a> Parser<'a> {
                 self.parse_ty_bare_fn(
                     lo,
                     lifetime_defs,
-                    Some(self.prev_token.span.shrink_to_lo()),
+                    Some(self.prev_token.span().shrink_to_lo()),
                     recover_return_sign,
                 )?
             } else {
@@ -322,18 +322,18 @@ impl<'a> Parser<'a> {
                 AllowCVariadic::No => {
                     // FIXME(Centril): Should we just allow `...` syntactically
                     // anywhere in a type and use semantic restrictions instead?
-                    self.sess.emit_err(NestedCVariadicType { span: lo.to(self.prev_token.span) });
+                    self.sess.emit_err(NestedCVariadicType { span: lo.to(self.prev_token.span()) });
                     TyKind::Err
                 }
             }
         } else {
             let msg = format!("expected type, found {}", super::token_descr(&self.token));
-            let mut err = self.struct_span_err(self.token.span, msg);
-            err.span_label(self.token.span, "expected type");
+            let mut err = self.struct_span_err(self.token.span(), msg);
+            err.span_label(self.token.span(), "expected type");
             return Err(err);
         };
 
-        let span = lo.to(self.prev_token.span);
+        let span = lo.to(self.prev_token.span());
         let mut ty = self.mk_ty(span, kind);
 
         // Try to recover from use of `+` with incorrect priority.
@@ -365,12 +365,12 @@ impl<'a> Parser<'a> {
         assert!(self.token.is_keyword(kw::Union) || self.token.is_keyword(kw::Struct));
         let is_union = self.token.is_keyword(kw::Union);
 
-        let lo = self.token.span;
+        let lo = self.token.span();
         self.bump();
 
         let (fields, _recovered) =
             self.parse_record_struct_body(if is_union { "union" } else { "struct" }, lo, false)?;
-        let span = lo.to(self.prev_token.span);
+        let span = lo.to(self.prev_token.span());
         self.sess.gated_spans.gate(sym::unnamed_fields, span);
         // These can be rejected during AST validation in `deny_anon_struct_or_union`.
         let kind = if is_union { TyKind::AnonUnion(fields) } else { TyKind::AnonStruct(fields) };
@@ -425,7 +425,7 @@ impl<'a> Parser<'a> {
         lo: Span,
         parse_plus: bool,
     ) -> PResult<'a, TyKind> {
-        let poly_trait_ref = PolyTraitRef::new(generic_params, path, lo.to(self.prev_token.span));
+        let poly_trait_ref = PolyTraitRef::new(generic_params, path, lo.to(self.prev_token.span()));
         let bounds = vec![GenericBound::Trait(poly_trait_ref, TraitBoundModifier::None)];
         self.parse_remaining_bounds(bounds, parse_plus)
     }
@@ -446,7 +446,7 @@ impl<'a> Parser<'a> {
     /// Parses a raw pointer type: `*[const | mut] $type`.
     fn parse_ty_ptr(&mut self) -> PResult<'a, TyKind> {
         let mutbl = self.parse_const_or_mut().unwrap_or_else(|| {
-            let span = self.prev_token.span;
+            let span = self.prev_token.span();
             self.sess.emit_err(ExpectedMutOrConstInRawPointerType {
                 span,
                 after_asterisk: span.shrink_to_hi(),
@@ -469,7 +469,7 @@ impl<'a> Parser<'a> {
                 // Recover from `[LIT; EXPR]` and `[LIT]`
                 self.bump();
                 err.emit();
-                self.mk_ty(self.prev_token.span, TyKind::Err)
+                self.mk_ty(self.prev_token.span(), TyKind::Err)
             }
             Err(err) => return Err(err),
         };
@@ -491,7 +491,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_borrowed_pointee(&mut self) -> PResult<'a, TyKind> {
-        let and_span = self.prev_token.span;
+        let and_span = self.prev_token.span();
         let mut opt_lifetime = self.check_lifetime().then(|| self.expect_lifetime());
         let mut mutbl = self.parse_mutability();
         if self.token.is_lifetime() && mutbl == Mutability::Mut && opt_lifetime.is_none() {
@@ -501,7 +501,7 @@ impl<'a> Parser<'a> {
             // If there *is* a plus next though, handling the error later provides better suggestions
             // (like adding parentheses)
             if !self.look_ahead(1, |t| t.is_like_plus()) {
-                let lifetime_span = self.token.span;
+                let lifetime_span = self.token.span();
                 let span = and_span.to(lifetime_span);
 
                 let (suggest_lifetime, snippet) =
@@ -519,7 +519,7 @@ impl<'a> Parser<'a> {
             && self.look_ahead(1, |t| t.is_keyword(kw::Mut))
         {
             // We have `&dyn mut ...`, which is invalid and should be `&mut dyn ...`.
-            let span = and_span.to(self.look_ahead(1, |t| t.span));
+            let span = and_span.to(self.look_ahead(1, |t| t.span()));
             self.sess.emit_err(DynAfterMut { span });
 
             // Recovery
@@ -562,14 +562,14 @@ impl<'a> Parser<'a> {
             kind: rustc_ast::VisibilityKind::Inherited,
             tokens: None,
         };
-        let span_start = self.token.span;
+        let span_start = self.token.span();
         let ast::FnHeader { ext, unsafety, constness, asyncness } =
             self.parse_fn_front_matter(&inherited_vis, Case::Sensitive)?;
         if self.may_recover() && self.token.kind == TokenKind::Lt {
             self.recover_fn_ptr_with_generics(lo, &mut params, param_insertion_point)?;
         }
         let decl = self.parse_fn_decl(|_| false, AllowPlus::No, recover_return_sign)?;
-        let whole_span = lo.to(self.prev_token.span);
+        let whole_span = lo.to(self.prev_token.span());
         if let ast::Const::Yes(span) = constness {
             // If we ever start to allow `const fn()`, then update
             // feature gating for `#![feature(const_extern_fn)]` to
@@ -579,7 +579,7 @@ impl<'a> Parser<'a> {
         if let ast::Async::Yes { span, .. } = asyncness {
             self.sess.emit_err(FnPointerCannotBeAsync { span: whole_span, qualifier: span });
         }
-        let decl_span = span_start.to(self.token.span);
+        let decl_span = span_start.to(self.token.span());
         Ok(TyKind::BareFn(P(BareFnTy { ext, unsafety, generic_params: params, decl, decl_span })))
     }
 
@@ -634,8 +634,8 @@ impl<'a> Parser<'a> {
                     // parse pattern with "'a Sized" we're supposed to give suggestion like
                     // "'a + Sized"
                     self.sess.emit_err(errors::MissingPlusBounds {
-                        span: self.token.span,
-                        hi: self.token.span.shrink_to_hi(),
+                        span: self.token.span(),
+                        hi: self.token.span().shrink_to_hi(),
                         sym,
                     });
                 }
@@ -660,12 +660,12 @@ impl<'a> Parser<'a> {
     ///
     /// Note that this does *not* parse bare trait objects.
     fn parse_dyn_ty(&mut self, impl_dyn_multi: &mut bool) -> PResult<'a, TyKind> {
-        let lo = self.token.span;
+        let lo = self.token.span();
         self.bump(); // `dyn`
 
         // parse dyn* types
         let syntax = if self.eat(&TokenKind::BinOp(token::Star)) {
-            self.sess.gated_spans.gate(sym::dyn_star, lo.to(self.prev_token.span));
+            self.sess.gated_spans.gate(sym::dyn_star, lo.to(self.prev_token.span()));
             TraitObjectSyntax::DynStar
         } else {
             TraitObjectSyntax::Dyn
@@ -725,7 +725,7 @@ impl<'a> Parser<'a> {
         {
             if self.token.is_keyword(kw::Dyn) {
                 // Account for `&dyn Trait + dyn Other`.
-                self.sess.emit_err(InvalidDynKeyword { span: self.token.span });
+                self.sess.emit_err(InvalidDynKeyword { span: self.token.span() });
                 self.bump();
             }
             bounds.push(self.parse_generic_bound()?);
@@ -759,10 +759,10 @@ impl<'a> Parser<'a> {
     /// BOUND = TY_BOUND | LT_BOUND
     /// ```
     fn parse_generic_bound(&mut self) -> PResult<'a, GenericBound> {
-        let lo = self.token.span;
+        let lo = self.token.span();
         let leading_token = self.prev_token.clone();
         let has_parens = self.eat(&token::OpenDelim(Delimiter::Parenthesis));
-        let inner_lo = self.token.span;
+        let inner_lo = self.token.span();
 
         let modifiers = self.parse_ty_bound_modifiers()?;
         let bound = if self.token.is_lifetime() {
@@ -813,9 +813,9 @@ impl<'a> Parser<'a> {
 
     /// Recover on `('lifetime)` with `(` already eaten.
     fn recover_paren_lifetime(&mut self, lo: Span, inner_lo: Span) -> PResult<'a, ()> {
-        let inner_span = inner_lo.to(self.prev_token.span);
+        let inner_span = inner_lo.to(self.prev_token.span());
         self.expect(&token::CloseDelim(Delimiter::Parenthesis))?;
-        let span = lo.to(self.prev_token.span);
+        let span = lo.to(self.prev_token.span());
         let (sugg, snippet) = if let Ok(snippet) = self.span_to_snippet(inner_span) {
             (Some(span), snippet)
         } else {
@@ -835,13 +835,13 @@ impl<'a> Parser<'a> {
     /// ```
     fn parse_ty_bound_modifiers(&mut self) -> PResult<'a, BoundModifiers> {
         let maybe_const = if self.eat(&token::Tilde) {
-            let tilde = self.prev_token.span;
+            let tilde = self.prev_token.span();
             self.expect_keyword(kw::Const)?;
-            let span = tilde.to(self.prev_token.span);
+            let span = tilde.to(self.prev_token.span());
             self.sess.gated_spans.gate(sym::const_trait_impl, span);
             Some(span)
         } else if self.eat_keyword(kw::Const) {
-            let span = self.prev_token.span;
+            let span = self.prev_token.span();
             self.sess.gated_spans.gate(sym::const_trait_impl, span);
             self.sess.emit_err(errors::ConstMissingTilde { span, start: span.shrink_to_lo() });
 
@@ -851,10 +851,10 @@ impl<'a> Parser<'a> {
         };
 
         let bound_polarity = if self.eat(&token::Question) {
-            BoundPolarity::Maybe(self.prev_token.span)
+            BoundPolarity::Maybe(self.prev_token.span())
         } else if self.eat(&token::Not) {
-            self.sess.gated_spans.gate(sym::negative_bounds, self.prev_token.span);
-            BoundPolarity::Negative(self.prev_token.span)
+            self.sess.gated_spans.gate(sym::negative_bounds, self.prev_token.span());
+            BoundPolarity::Negative(self.prev_token.span())
         } else {
             BoundPolarity::Positive
         };
@@ -944,10 +944,10 @@ impl<'a> Parser<'a> {
                 self.parse_remaining_bounds(bounds, true)?;
                 self.expect(&token::CloseDelim(Delimiter::Parenthesis))?;
                 self.sess.emit_err(errors::IncorrectParensTraitBounds {
-                    span: vec![lo, self.prev_token.span],
+                    span: vec![lo, self.prev_token.span()],
                     sugg: errors::IncorrectParensTraitBoundsSugg {
-                        wrong_span: leading_token.span.shrink_to_hi().to(lo),
-                        new_span: leading_token.span.shrink_to_lo(),
+                        wrong_span: leading_token.span().shrink_to_hi().to(lo),
+                        new_span: leading_token.span().shrink_to_lo(),
                     },
                 });
             } else {
@@ -956,26 +956,26 @@ impl<'a> Parser<'a> {
         }
 
         let modifier = modifiers.to_trait_bound_modifier();
-        let poly_trait = PolyTraitRef::new(lifetime_defs, path, lo.to(self.prev_token.span));
+        let poly_trait = PolyTraitRef::new(lifetime_defs, path, lo.to(self.prev_token.span()));
         Ok(GenericBound::Trait(poly_trait, modifier))
     }
 
     // recovers a `Fn(..)` parenthesized-style path from `fn(..)`
     fn recover_path_from_fn(&mut self) -> Option<ast::Path> {
-        let fn_token_span = self.token.span;
+        let fn_token_span = self.token.span();
         self.bump();
-        let args_lo = self.token.span;
+        let args_lo = self.token.span();
         let snapshot = self.create_snapshot_for_diagnostic();
         match self.parse_fn_decl(|_| false, AllowPlus::No, RecoverReturnSign::OnlyFatArrow) {
             Ok(decl) => {
                 self.sess.emit_err(ExpectedFnPathFoundFnKeyword { fn_token_span });
                 Some(ast::Path {
-                    span: fn_token_span.to(self.prev_token.span),
+                    span: fn_token_span.to(self.prev_token.span()),
                     segments: thin_vec![ast::PathSegment {
                         ident: Ident::new(Symbol::intern("Fn"), fn_token_span),
                         id: DUMMY_NODE_ID,
                         args: Some(P(ast::GenericArgs::Parenthesized(ast::ParenthesizedArgs {
-                            span: args_lo.to(self.prev_token.span),
+                            span: args_lo.to(self.prev_token.span()),
                             inputs: decl.inputs.iter().map(|a| a.ty.clone()).collect(),
                             inputs_span: args_lo.until(decl.output.span()),
                             output: decl.output.clone(),
@@ -1046,13 +1046,13 @@ impl<'a> Parser<'a> {
         }
 
         // Parse `(T, U) -> R`.
-        let inputs_lo = self.token.span;
+        let inputs_lo = self.token.span();
         let inputs: ThinVec<_> =
             self.parse_fn_params(|_| false)?.into_iter().map(|input| input.ty).collect();
-        let inputs_span = inputs_lo.to(self.prev_token.span);
+        let inputs_span = inputs_lo.to(self.prev_token.span());
         let output = self.parse_ret_ty(AllowPlus::No, RecoverQPath::No, RecoverReturnSign::No)?;
         let args = ast::ParenthesizedArgs {
-            span: fn_path_segment.span().to(self.prev_token.span),
+            span: fn_path_segment.span().to(self.prev_token.span()),
             inputs,
             inputs_span,
             output,
@@ -1107,7 +1107,7 @@ impl<'a> Parser<'a> {
             self.bump();
             Lifetime { ident, id: ast::DUMMY_NODE_ID }
         } else {
-            self.span_bug(self.token.span, "not a lifetime")
+            self.span_bug(self.token.span(), "not a lifetime")
         }
     }
 

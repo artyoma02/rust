@@ -60,7 +60,7 @@ pub(super) fn parse(
                         match trees.next() {
                             Some(tokenstream::TokenTree::Token(token, _)) => match token.ident() {
                                 Some((frag, _)) => {
-                                    let span = token.span.with_lo(start_sp.lo());
+                                    let span = token.span().with_lo(start_sp.lo());
 
                                     let kind =
                                         token::NonterminalKind::from_symbol(frag.name, || {
@@ -94,7 +94,7 @@ pub(super) fn parse(
                                     result.push(TokenTree::MetaVarDecl(span, ident, Some(kind)));
                                     continue;
                                 }
-                                _ => token.span,
+                                _ => token.span(),
                             },
                             tree => tree.map_or(span, tokenstream::TokenTree::span),
                         }
@@ -246,8 +246,8 @@ fn parse_tree<'a>(
                         "expected identifier, found `{}`",
                         pprust::token_to_string(&token),
                     );
-                    sess.span_diagnostic.span_err(token.span, msg);
-                    TokenTree::MetaVar(token.span, Ident::empty())
+                    sess.span_diagnostic.span_err(token.span(), msg);
+                    TokenTree::MetaVar(token.span(), Ident::empty())
                 }
 
                 // There are no more tokens. Just return the `$` we already have.
@@ -292,7 +292,7 @@ fn parse_kleene_op<'a>(
 ) -> Result<Result<(KleeneOp, Span), Token>, Span> {
     match input.next() {
         Some(tokenstream::TokenTree::Token(token, _)) => match kleene_op(&token) {
-            Some(op) => Ok(Ok((op, token.span))),
+            Some(op) => Ok(Ok((op, token.span()))),
             None => Ok(Err(token.clone())),
         },
         tree => Err(tree.map_or(span, tokenstream::TokenTree::span)),
@@ -322,12 +322,12 @@ fn parse_sep_and_kleene_op<'a>(
         Ok(Ok((op, span))) => return (None, KleeneToken::new(op, span)),
 
         // #1 is a separator followed by #2, a KleeneOp
-        Ok(Err(token)) => match parse_kleene_op(input, token.span) {
+        Ok(Err(token)) => match parse_kleene_op(input, token.span()) {
             // #2 is the `?` Kleene op, which does not take a separator (error)
             Ok(Ok((KleeneOp::ZeroOrOne, span))) => {
                 // Error!
                 sess.span_diagnostic.span_err(
-                    token.span,
+                    token.span(),
                     "the `?` macro repetition operator does not take a separator",
                 );
 
@@ -358,9 +358,9 @@ fn parse_sep_and_kleene_op<'a>(
 // For example, `macro_rules! foo { ( ${length()} ) => {} }`
 fn span_dollar_dollar_or_metavar_in_the_lhs_err(sess: &ParseSess, token: &Token) {
     sess.span_diagnostic
-        .span_err(token.span, format!("unexpected token: {}", pprust::token_to_string(token)));
+        .span_err(token.span(), format!("unexpected token: {}", pprust::token_to_string(token)));
     sess.span_diagnostic.span_note_without_error(
-        token.span,
+        token.span(),
         "`$$` and meta-variable expressions are not allowed inside macro parameter definitions",
     );
 }

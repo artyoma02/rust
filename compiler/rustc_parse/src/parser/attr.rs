@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
                 Some(self.parse_attribute(inner_parse_policy)?)
             } else if let token::DocComment(comment_kind, attr_style, data) = self.token.kind {
                 if attr_style != ast::AttrStyle::Outer {
-                    let span = self.token.span;
+                    let span = self.token.span();
                     let mut err = self.sess.span_diagnostic.struct_span_err_with_code(
                         span,
                         fluent::parse_inner_doc_comment_not_permitted,
@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
                     comment_kind,
                     ast::AttrStyle::Outer,
                     data,
-                    self.prev_token.span,
+                    self.prev_token.span(),
                 ))
             } else {
                 None
@@ -116,7 +116,7 @@ impl<'a> Parser<'a> {
             "parse_attribute: inner_parse_policy={:?} self.token={:?}",
             inner_parse_policy, self.token
         );
-        let lo = self.token.span;
+        let lo = self.token.span();
         // Attributes can't have attributes of their own [Editor's note: not with that attitude]
         self.collect_tokens_no_attrs(|this| {
             assert!(this.eat(&token::Pound), "parse_attribute called in non-attribute position");
@@ -127,7 +127,7 @@ impl<'a> Parser<'a> {
             this.expect(&token::OpenDelim(Delimiter::Bracket))?;
             let item = this.parse_attr_item(false)?;
             this.expect(&token::CloseDelim(Delimiter::Bracket))?;
-            let attr_sp = lo.to(this.prev_token.span);
+            let attr_sp = lo.to(this.prev_token.span());
 
             // Emit error if inner attribute is encountered and forbidden.
             if style == ast::AttrStyle::Inner {
@@ -289,7 +289,7 @@ impl<'a> Parser<'a> {
                         comment_kind,
                         attr_style,
                         data,
-                        self.prev_token.span,
+                        self.prev_token.span(),
                     ))
                 } else {
                     None
@@ -338,9 +338,9 @@ impl<'a> Parser<'a> {
         // Presumably, the majority of the time there will only be one attr.
         let mut expanded_attrs = Vec::with_capacity(1);
         while self.token.kind != token::Eof {
-            let lo = self.token.span;
+            let lo = self.token.span();
             let item = self.parse_attr_item(true)?;
-            expanded_attrs.push((item, lo.to(self.prev_token.span)));
+            expanded_attrs.push((item, lo.to(self.prev_token.span())));
             if !self.eat(&token::Comma) {
                 break;
             }
@@ -386,10 +386,10 @@ impl<'a> Parser<'a> {
             };
         }
 
-        let lo = self.token.span;
+        let lo = self.token.span();
         let path = self.parse_path(PathStyle::Mod)?;
         let kind = self.parse_meta_item_kind()?;
-        let span = lo.to(self.prev_token.span);
+        let span = lo.to(self.prev_token.span());
         Ok(ast::MetaItem { path, kind, span })
     }
 
@@ -417,7 +417,7 @@ impl<'a> Parser<'a> {
             Err(err) => err.cancel(),
         }
 
-        Err(InvalidMetaItem { span: self.token.span, token: self.token.clone() }
+        Err(InvalidMetaItem { span: self.token.span(), token: self.token.clone() }
             .into_diagnostic(&self.sess.span_diagnostic))
     }
 }
